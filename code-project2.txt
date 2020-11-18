@@ -1,0 +1,50 @@
+#install.packages("fastDummies")
+#install.packages("Metrics")
+library(tidyverse)
+library(fastDummies)
+library(Metrics)
+mydata <- read.csv("C:/Users/liuyf/Documents/tidydata.csv", header=TRUE)
+# view data structure 
+str(tidydata)
+# notice that recoding of Project I does not give correct dummy variables (i.e. for gender it gives 1/2 instead of 0,1)
+# ajudst to obtain correct dummy variables and delete useless variables
+tidydata <-dummy_cols(tidydata,select_columns=c('sex','workclass','occupation','income'))
+data <- select(tidydata,-c(workclass,marital.status,occupation,race,sex,capital.gain,capital.loss,native.country,income,workclasscode,marital.statuscode,occupationcode,racecode,sexcode,native.countrycode,incomecode))
+# rename variables to fit model specification
+names(data)[2]<-"edu_yr"
+names(data)[3]<-"hr_week"
+names(data)[5]<-"male"
+names(data)[12]<-"withoutpay"
+names(data)[14]<-"armedforce"
+names(data)[27]<-"less_earning"
+names(data)[28]<-"greater_earning"
+data<-select(data,-c(sex_Female,withoutpay,armedforce,less_earning))
+data$male.edu_yr <-data$male*data$edu_yr
+data$age2 <-data$age^2
+# spliting train and test
+data1 <- sort(sample(nrow(data),nrow(data)*.7))
+train <-data[data1,]
+test <-data[-data1,]
+# model building and residual analysis
+m1 <- lm(greater_earning~edu_yr+hr_week+male+age,data=train)
+summary(m1)
+par(mfrow = c(2, 2))
+plot(m1)
+m2 <- lm(greater_earning~edu_yr+hr_week+male+age+male.edu_yr,data=train)
+par(mfrow = c(2, 2))
+plot(m2)
+m3 <- lm(greater_earning~edu_yr+hr_week+male+age+male.edu_yr+age2,data=train)
+par(mfrow = c(2, 2))
+plot(m3)
+m4 <- lm(greater_earning~.,data=train)
+par(mfrow = c(2, 2))
+plot(m4)
+# model assessing
+p1 <- predict(m1,test)
+rmse(test$greater_earning,p1)
+p2 <- predict(m2,test)
+rmse(test$greater_earning,p2)
+p3 <- predict(m3,test)
+rmse(test$greater_earning,p3)
+p4 <- predict(m4,test)
+rmse(test$greater_earning,p4)
